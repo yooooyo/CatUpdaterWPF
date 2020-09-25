@@ -28,12 +28,62 @@ namespace CatUpdater_WPF
     {
 
         BackgroundWorker updateWorker = new BackgroundWorker();
-
+        WinPVT pvt = new WinPVT();
+        PwrStress pws = new PwrStress();
+        CAT cat = new CAT();
 
         public MainWindow()
         {
             InitializeComponent();
+            InitUIdata();
             InitUpdateFeature();
+        }
+
+        private void InitUIdata()
+        {
+            if (cat.getServer != null) { btn_connection.Visibility = Visibility.Visible; } else btn_disconnection.Visibility = Visibility.Visible;
+
+            label_cat_local_version.Content = cat.localVersion;
+            label_cat_server_version.Content = cat.serverVersion;
+
+
+
+            label_pwrstress_version.Content = pws.localVersion;
+            if (pws.localVersion == "") btn_pwrstress_uninstall.IsEnabled = false;
+
+            btn_pwrstress_install.IsEnabledChanged += Btn_pwrstress_install_IsEnabledChanged;
+            btn_pwrstress_uninstall.IsEnabledChanged += Btn_pwrstress_uninstall_IsEnabledChanged;
+
+            label_winvpt_version.Content = pvt.localVersion;
+            if (pvt.localVersion == "") btn_winpvt_uninstall.IsEnabled = false;
+
+            btn_winpvt_install.IsEnabledChanged += Btn_winpvt_install_IsEnabledChanged;
+            btn_winpvt_uninstall.IsEnabledChanged += Btn_winpvt_uninstall_IsEnabledChanged;
+
+        }
+
+        private void Btn_winpvt_uninstall_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
+        }
+
+        private void Btn_winpvt_install_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
+        }
+
+        private void Btn_pwrstress_uninstall_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
+        }
+
+        private void Btn_pwrstress_install_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
+        }
+
+        private void Label_pwrstress_version_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
 
         }
 
@@ -47,7 +97,76 @@ namespace CatUpdater_WPF
 
             pgbar_updateProgress.Value = 0;
         }
+        private void Combo_winpvt_version_DropDownOpened(object sender, EventArgs e)
+        {
+            textbox_installpvt_args.IsEnabled = false;
+            btn_winpvt_install.IsEnabled = false;
+            combo_winpvt_version.ItemsSource = pvt.getServerList.OrderByDescending(x => x.LastWriteTime);
+            btn_winpvt_install.IsEnabled = true;
+            textbox_installpvt_args.IsEnabled = true;
+        }
 
+        private void Combo_pwrstress_version_DropDownOpened(object sender, EventArgs e)
+        {
+            btn_pwrstress_install.IsEnabled = false;
+            combo_pwrstress_version.ItemsSource = pws.getServerList.OrderByDescending(x => x.CreationTime);
+            btn_pwrstress_install.IsEnabled = true;
+        }
+
+        private async void Btn_winpvt_uninstall_Click(object sender, RoutedEventArgs e)
+        {
+            if (pvt.localVersion != "") { txtblock_updateLog.Text = "Uninstalling WinPVT"; await pvt.uninstall(); }
+            pvt = new WinPVT();
+            label_winvpt_version.Content = pvt.localVersion;
+        }
+
+        private async void Btn_winpvt_install_Click(object sender, RoutedEventArgs e)
+        {
+            if (pvt.localVersion != "") { txtblock_updateLog.Text = "Uninstalling WinPVT"; await pvt.uninstall(); }
+            var winpvt = (FileInfo)combo_winpvt_version.SelectedValue;
+            if (pvt.getLocalList.Count() == 0 || (pvt.getLocalList.Count() > 0 && !pvt.getLocalList.Select(x=>x.Name).ToList().Contains(winpvt.Name)))
+            {
+                winpvt = await  Task.Factory.StartNew(()=> { return winpvt.CopyTo($@"C:\Program Files (x86)\Cat\WinPVT\{winpvt.Name}"); });
+            }
+            await pvt.install(winpvt.Name,textbox_installpvt_args.Text);
+            pvt = new WinPVT();
+            label_winvpt_version.Content = pvt.localVersion;
+        }
+
+        private async void Btn_pwrstress_uninstall_Click(object sender, RoutedEventArgs e)
+        {
+            btn_pwrstress_uninstall.IsEnabled = false;
+            txtblock_updateLog.Text = "Uninstalling PowerStress!!";
+            var uninstallTask = pws.uninstall();
+            await uninstallTask;
+            foreach(var v in uninstallTask.Result)
+            {
+                txtbox_updateLog.Text += v.Name + Environment.NewLine;
+                v.Delete();
+            }
+            txtbox_updateLog.ScrollToEnd();
+            btn_pwrstress_uninstall.IsEnabled = true;
+            txtblock_updateLog.Text = "Uninstalled PowerStress!!";
+            pws = new PwrStress();
+            label_pwrstress_version.Content = pws.localVersion;
+        }
+
+        private async void Btn_pwrstress_install_Click(object sender, RoutedEventArgs e)
+        {
+            btn_pwrstress_install.IsEnabled = false;
+            var pwsInstall = (DirectoryInfo)combo_pwrstress_version.SelectedValue;
+            if (pws.localVersion != "") ;
+            await Task.Factory.StartNew(() =>
+            {
+                foreach (var v in pws.addCopyList(pwsInstall))
+                {
+                    CopyFile(v.Item1, v.Item2);
+                }
+            });
+            btn_pwrstress_install.IsEnabled = true;
+            pws = new PwrStress();
+            label_pwrstress_version.Content = pws.localVersion;
+        }
 
         private void Btn_updateTrigger_Click(object sender, RoutedEventArgs e)
         {
@@ -67,12 +186,7 @@ namespace CatUpdater_WPF
 
         }
 
-        private void UpdateWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            pgbar_updateProgress.Value = e.ProgressPercentage;
-            txtbox_updateLog.Text += ((FileInfo)e.UserState).Name + Environment.NewLine;
-            txtbox_updateLog.ScrollToEnd();
-        }
+
 
         private async void UpdateWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
@@ -88,11 +202,10 @@ namespace CatUpdater_WPF
             }
             else
             {
-                var pvt = new WinPVT();
                 if (pvt.canUpdate)
                 {
                     btn_updateTrigger.IsEnabled = false;
-                    if (pvt.isInstalled) { await pvt.uninstall(); txtblock_updateLog.Text = "Uninstalling WinPVT"; }
+                    if (pvt.isInstalled) { txtblock_updateLog.Text = "Uninstalling WinPVT";  await pvt.uninstall(); }
                     txtblock_updateLog.Text = "Installing WinPVT, waiting for restart !!";
                     await pvt.install();
                 }
@@ -104,13 +217,18 @@ namespace CatUpdater_WPF
 
             }
         }
-
+        private void UpdateWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            pgbar_updateProgress.Value = e.ProgressPercentage;
+            txtbox_updateLog.Text += ((FileInfo)e.UserState).Name + Environment.NewLine;
+            txtbox_updateLog.ScrollToEnd();
+        }
         private void UpdateWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             try
             {
-
-                var files = CopyFiles();
+                
+                var files = CopyFilesList();
                 var total = files.Count();
                 var cnt = 0;
 
@@ -123,12 +241,10 @@ namespace CatUpdater_WPF
                     }
 
 
-                    var destiFile = v.Item2;
-                    if (!destiFile.Directory.Exists) destiFile.Directory.Create();
-                    v.Item1.CopyTo(destiFile.FullName, true);
+                    CopyFile(v.Item1, v.Item2);
 
                     var percentage = (cnt += 1)*100 / total;
-                    updateWorker.ReportProgress(percentage, destiFile);
+                    updateWorker.ReportProgress(percentage, v.Item2);
 
                 }
             }
@@ -142,11 +258,9 @@ namespace CatUpdater_WPF
 
 
         /* COPY FILES */
-        private IEnumerable<Tuple<FileInfo, FileInfo>> CopyFiles()
+        private IEnumerable<Tuple<FileInfo, FileInfo>> CopyFilesList()
         {
-            var pvt = new WinPVT();
-            var pws = new PwrStress();
-            var cat = new CAT();
+
 
             IEnumerable<Tuple<FileInfo, FileInfo>> copyList = Enumerable.Empty<Tuple<FileInfo, FileInfo>>();
 
@@ -157,6 +271,11 @@ namespace CatUpdater_WPF
             return copyList;
         }
 
+        private void CopyFile(FileInfo source,FileInfo desti)
+        {
+            if (!desti.Directory.Exists) desti.Directory.Create();
+            source.CopyTo(desti.FullName, true);
+        }
         
         class WinPVT
         {
@@ -216,7 +335,8 @@ namespace CatUpdater_WPF
                         }
                         if (d != null && d != null)
                         {
-                            var winpvt = d.EnumerateFiles().Aggregate((x, y) => x.LastWriteTime > y.LastWriteTime ? x : y);
+                            getServerList = d.EnumerateFiles();
+                            var winpvt = getServerList.Aggregate((x, y) => x.LastWriteTime > y.LastWriteTime ? x : y);
                             if (winpvt != null)
                             {
                                 serverVersion = winpvtGetRegex(winpvt.Name).Groups[1].Value;
@@ -228,6 +348,17 @@ namespace CatUpdater_WPF
                     return null;
                 }
             }
+            public IEnumerable<FileInfo> getServerList;
+            public IEnumerable<FileInfo> getLocalList
+            {
+                get
+                {
+                    var d = new DirectoryInfo(@"C:\Program Files (x86)\Cat\WinPVT");
+                    if (!d.Exists) d.Create();
+                    return d.EnumerateFiles();
+                }
+            }
+
             public bool isInstalled;
             public bool isDownloaded
             {
@@ -249,8 +380,8 @@ namespace CatUpdater_WPF
                     return false;
                 }
             }
-            public string localVersion;
-            public string serverVersion;
+            public string localVersion="";
+            public string serverVersion="";
             public bool canUpdate
             {
                 get
@@ -298,7 +429,11 @@ namespace CatUpdater_WPF
             }
             public Task<bool> install()
             {
-                return Task.Factory.StartNew(() => executeProgram($@"C:\Program Files (x86)\Cat\WinPVT\{getServer.Name}", "/S /v/passive"));
+                return install(getServer.Name);
+            }
+            public Task<bool> install(string version,string command = "/S /v/passive")
+            {
+                return Task.Factory.StartNew(() => executeProgram($@"C:\Program Files (x86)\Cat\WinPVT\{version}", command));
             }
             public Task<bool> uninstall()
             {
@@ -421,7 +556,7 @@ namespace CatUpdater_WPF
                     var d = new DirectoryInfo(@"\\lab_server\share\PowerStressTest");
                     if (d.Exists)
                     {
-                        var ds = d.EnumerateDirectories();
+                        var ds = getServerList =  d.EnumerateDirectories();
                         if (ds.Count() > 1)
                         {
                             d = ds.Aggregate((x, y) => Version.Parse(pwrstressGetRegex(x.Name).Groups[1].Value) >
@@ -446,9 +581,9 @@ namespace CatUpdater_WPF
                     return null;
                 }
             }
-
-            public string localVersion;
-            public string serverVersion;
+            public IEnumerable<DirectoryInfo> getServerList;
+            public string localVersion="";
+            public string serverVersion="";
             public bool canUpdate
             {
                 get
@@ -470,9 +605,30 @@ namespace CatUpdater_WPF
                     yield return new Tuple<FileInfo, FileInfo>(_s, new FileInfo(Regex.Replace(_s.FullName, @"(.*)Release", @"C:\Release")));
                 }
             }
+            public IEnumerable<Tuple<FileInfo, FileInfo>> addCopyList(DirectoryInfo pws)
+            {
+                var s = pws.EnumerateFiles("*", SearchOption.AllDirectories);
+                foreach (var _s in s)
+                {
+                    yield return new Tuple<FileInfo, FileInfo>(_s, new FileInfo(Regex.Replace(_s.FullName, @"(.*)Release", @"C:\Release")));
+                }
+            }
             private Match pwrstressGetRegex(string input)
             {
                 return Regex.Match(input, @"PowerStressTest-((?:\d+\.?)+)");
+            }
+
+            public Task<IEnumerable<FileSystemInfo>> uninstall()
+            {
+               IEnumerable<FileSystemInfo>  _uninstall()
+                {
+                    foreach (var v in getLocal.Directory.EnumerateFileSystemInfos("*", SearchOption.AllDirectories))
+                    {
+                        if(v.Attributes == FileAttributes.Directory) continue;
+                        yield return  v;
+                    }
+                }
+                return Task.Factory.StartNew(_uninstall);
             }
 
             public PwrStress()
@@ -499,8 +655,8 @@ namespace CatUpdater_WPF
                     return false;
                 }
             }
-            public string localVersion;
-            public string serverVersion;
+            public string localVersion="";
+            public string serverVersion="";
             FileInfo getlocal
             {
                 get
@@ -556,7 +712,70 @@ namespace CatUpdater_WPF
         }
         class UPDATER
         {
+            public FileInfo getLocal;
+            public FileInfo getServer;
+            FileInfo getlocal
+            {
+                get
+                {
+                    var f = new FileInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    Debug.Assert(f != null, $"Local Updater is null: {f.FullName}");
+                    localVersion = FileVersionInfo.GetVersionInfo(f.FullName).ProductVersion;
+                    isInstalled = true;
+                    return f;
+                }
+            }
+            FileInfo getserver
+            {
+                get
+                {
+                    var f = new FileInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    var sF = new FileInfo($@"\\lab_server\share\{f.Name}");
+                    if (sF.Exists)
+                    {
+                        serverVersion = FileVersionInfo.GetVersionInfo(sF.FullName).ProductVersion;
+                        return sF;
+                    }
+                    return null;
+                }
+            }
+            public bool isInstalled;
+            public bool canUpdate
+            {
+                get
+                {
+                    if (!isInstalled) return true;
+                    else if (localVersion != "" && serverVersion != "")
+                    {
+                        return Version.Parse(serverVersion) > Version.Parse(localVersion);
+                    }
+                    return false;
+                }
+            }
+            public string localVersion;
+            public string serverVersion;
+            public UPDATER()
+            {
+                getLocal = getlocal;
+                getServer = getserver;
+            }
+
+            public void install()
+            {
+                Task.Factory.StartNew(() =>
+                    {
+                        Process.Start("xcopy", $"{getServer.FullName} {getLocal.Directory.FullName} /Y");
+                    }
+                );
+            }
+        }
+
+        class Scripts
+        {
 
         }
+
+
+
     }
 }

@@ -110,7 +110,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Iconsmind-Outline-Black-Cat.ico" />
@@ -120,6 +122,13 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="progressbarimg.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="line-chart.png" />
+    <Resource Include="chart.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="android-spinner.gif" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
