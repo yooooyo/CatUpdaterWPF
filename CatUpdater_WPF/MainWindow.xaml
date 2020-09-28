@@ -66,8 +66,8 @@
             <TabItem BorderBrush="{x:Null}" Background="{x:Null}" Foreground="#FF49EBB5" Header="Cat">
                 <Grid Background="#FF333334" HorizontalAlignment="Right" Width="321" Height="83" VerticalAlignment="Bottom">
                     <Label Content="Current" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,44,0,0" Background="{x:Null}" Foreground="#FF62F0B2" Width="41"/>
-                    <Button x:Name="btn_cat_install" Content="Install" HorizontalAlignment="Left" Margin="194,15,0,0" VerticalAlignment="Top" Width="75" RenderTransformOrigin="0.347,-0.479" BorderBrush="{x:Null}" Foreground="#FF41F1CD" Background="#FF222223" Height="18" IsEnabled="False"/>
-                    <Button x:Name="btn_cat_uninstall" Content="Uninstall" HorizontalAlignment="Left" Margin="194,47,0,0" VerticalAlignment="Top" Width="75" RenderTransformOrigin="0.347,-0.479" BorderBrush="{x:Null}" Foreground="#FF41F1CD" Background="#FF222223"/>
+                    <Button x:Name="btn_cat_install" Content="Install" HorizontalAlignment="Left" Margin="194,15,0,0" VerticalAlignment="Top" Width="75" RenderTransformOrigin="0.347,-0.479" BorderBrush="{x:Null}" Foreground="#FF41F1CD" Background="#FF222223" Height="18" Click="Btn_cat_install_Click"/>
+                    <Button x:Name="btn_cat_uninstall" Content="Uninstall" HorizontalAlignment="Left" Margin="194,47,0,0" VerticalAlignment="Top" Width="75" RenderTransformOrigin="0.347,-0.479" BorderBrush="{x:Null}" Foreground="#FF41F1CD" Background="#FF222223" Click="Btn_cat_uninstall_Click"/>
                     <Label Content="Server" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,13,0,0" Background="{x:Null}" Foreground="#FF62F0B2" Width="41"/>
                     <Label x:Name="label_cat_local_version" Content="Current" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="59,44,0,0" Background="{x:Null}" Foreground="#FF62F0B2" Width="93"/>
                     <Label x:Name="label_cat_server_version" Content="Current" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="59,13,0,0" Background="{x:Null}" Foreground="#FF62F0B2" Width="93"/>

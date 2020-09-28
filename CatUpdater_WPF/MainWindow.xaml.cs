@@ -57,6 +57,9 @@ namespace CatUpdater_WPF
             label_winvpt_version.Content = pvt.localVersion;
             if (pvt.localVersion == "") btn_winpvt_uninstall.IsEnabled = false;
 
+            if (cat.serverVersion == "") btn_cat_install.IsEnabled = false;
+            if (cat.localVersion == "")  btn_cat_uninstall.IsEnabled = false;
+
             btn_winpvt_install.IsEnabledChanged += Btn_winpvt_install_IsEnabledChanged;
             btn_winpvt_uninstall.IsEnabledChanged += Btn_winpvt_uninstall_IsEnabledChanged;
 
@@ -139,7 +142,8 @@ namespace CatUpdater_WPF
             txtblock_updateLog.Text = "Uninstalling PowerStress!!";
             var uninstallTask = pws.uninstall();
             await uninstallTask;
-            foreach(var v in uninstallTask.Result)
+            txtbox_updateLog.Text = "";
+            foreach (var v in uninstallTask.Result)
             {
                 txtbox_updateLog.Text += v.Name + Environment.NewLine;
                 v.Delete();
@@ -153,20 +157,97 @@ namespace CatUpdater_WPF
 
         private async void Btn_pwrstress_install_Click(object sender, RoutedEventArgs e)
         {
+            var uiContent = TaskScheduler.FromCurrentSynchronizationContext();
             btn_pwrstress_install.IsEnabled = false;
-            var pwsInstall = (DirectoryInfo)combo_pwrstress_version.SelectedValue;
+            btn_pwrstress_uninstall.IsEnabled = false;
+            var pwsInstallVersion = (DirectoryInfo)combo_pwrstress_version.SelectedValue;
             if (pws.localVersion != "") ;
-            await Task.Factory.StartNew(() =>
+            txtblock_updateLog.Text = "Installing PowerStress!!";
+            txtbox_updateLog.Text = "";
+
+            foreach (var v in pws.addCopyList(pwsInstallVersion))
             {
-                foreach (var v in pws.addCopyList(pwsInstall))
+                await Task.Factory.StartNew(() =>
                 {
                     CopyFile(v.Item1, v.Item2);
-                }
-            });
+
+                }).ContinueWith(t =>
+                {
+                    txtbox_updateLog.Text += v.Item2.Name + Environment.NewLine;
+                    txtbox_updateLog.ScrollToEnd();
+                },uiContent);
+            }
+
             btn_pwrstress_install.IsEnabled = true;
             pws = new PwrStress();
             label_pwrstress_version.Content = pws.localVersion;
+            btn_pwrstress_uninstall.IsEnabled = true;
+            txtblock_updateLog.Text = "Installed PowerStress!!";
         }
+
+        private async void Btn_cat_install_Click(object sender, RoutedEventArgs e)
+        {
+            var uiContent = TaskScheduler.FromCurrentSynchronizationContext();
+            btn_cat_install.IsEnabled = false;
+            btn_cat_uninstall.IsEnabled = false;
+            txtblock_updateLog.Text = "Installing Cat";
+            txtbox_updateLog.Text = "";
+            foreach (var v in cat.addCopyList())
+            {
+                await Task.Factory.StartNew(() =>
+                {
+                    CopyFile(v.Item1, v.Item2);
+
+                }).ContinueWith(t =>
+                {
+                    txtbox_updateLog.Text += v.Item2.Name + Environment.NewLine;
+                    txtbox_updateLog.ScrollToEnd();
+                }, uiContent);
+            }
+
+            cat = new CAT();
+            label_cat_local_version.Content = cat.localVersion;
+            txtblock_updateLog.Text = "Installed Cat";
+            btn_cat_install.IsEnabled = true;
+            btn_cat_uninstall.IsEnabled = true;
+        }
+
+        private async void Btn_cat_uninstall_Click(object sender, RoutedEventArgs e)
+        {
+            var uiContent = TaskScheduler.FromCurrentSynchronizationContext();
+            btn_cat_install.IsEnabled = false;
+            btn_cat_uninstall.IsEnabled = false;
+            txtblock_updateLog.Text = "Uninstalling Cat";
+            txtbox_updateLog.Text = "";
+            foreach (var v in cat.getLocal.Directory.EnumerateFiles("*",SearchOption.AllDirectories).Where(x=>x.DirectoryName!="WinPVT"))
+            {
+                await Task.Factory.StartNew(() =>
+                {
+                    try
+                    {
+                        v.SetAccessControl(new System.Security.AccessControl.FileSecurity(v.FullName, System.Security.AccessControl.AccessControlSections.All));
+                        v.Delete();
+                    }
+                    catch
+                    {
+                        File.SetAttributes(v.FullName, FileAttributes.Normal);
+                        File.Delete(v.FullName);
+                    }
+
+                }).ContinueWith(t =>
+                {
+                    txtbox_updateLog.Text += v.Name + Environment.NewLine;
+                    txtbox_updateLog.ScrollToEnd();
+                }, uiContent);
+            }
+
+            cat = new CAT();
+            label_cat_local_version.Content = cat.localVersion;
+            txtblock_updateLog.Text = "Uninstalled Cat";
+            btn_cat_install.IsEnabled = true;
+            btn_cat_uninstall.IsEnabled = false;
+        }
+
 
         private void Btn_updateTrigger_Click(object sender, RoutedEventArgs e)
         {
@@ -274,7 +355,15 @@ namespace CatUpdater_WPF
         private void CopyFile(FileInfo source,FileInfo desti)
         {
             if (!desti.Directory.Exists) desti.Directory.Create();
-            source.CopyTo(desti.FullName, true);
+            try
+            {
+                source.CopyTo(desti.FullName, true);
+            }
+            catch
+            {
+                source.SetAccessControl(new System.Security.AccessControl.FileSecurity(source.FullName, System.Security.AccessControl.AccessControlSections.All));
+                source.CopyTo(desti.FullName, true);
+            }
         }
         
         class WinPVT
@@ -344,7 +433,7 @@ namespace CatUpdater_WPF
                             }
                         }
                     }
-                    else throw new Exception($"Server not find {d.FullName}");
+                    else MessageBox.Show($"Server not find {d.FullName}");
                     return null;
                 }
             }
@@ -577,7 +666,7 @@ namespace CatUpdater_WPF
                             }
                         }
                     }
-                    else throw new Exception($"Not find {d.FullName}");
+                    else MessageBox.Show($"Not find {d.FullName}");
                     return null;
                 }
             }
@@ -691,7 +780,7 @@ namespace CatUpdater_WPF
                         }
 
                     }
-                    else throw new Exception($"Server not find {d.FullName}");
+                    else MessageBox.Show($"Server not find {d.FullName}");
                     return null;
                 }
             }
@@ -708,6 +797,16 @@ namespace CatUpdater_WPF
                 {
                     yield return new Tuple<FileInfo, FileInfo>(_s, new FileInfo(Regex.Replace(_s.FullName, @"(.*)CatClient3.0", @"C:\Program Files (x86)\Cat")));
                 }
+            }
+
+            public void install()
+            {
+
+            }
+
+            public void uninstall()
+            {
+
             }
         }
         class UPDATER
@@ -774,7 +873,6 @@ namespace CatUpdater_WPF
         {
 
         }
-
 
 
     }
